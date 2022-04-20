@@ -6,12 +6,12 @@ using namespace std;
 
 
 int main (int argc, char ** argv) {
-    int n_proc, universe_size, *univ_sizep, flag;
+    int world_size, universe_size, *univ_sizep, flag;
     MPI_Comm everyone;
 
     MPI_Init(&argc, &argv);
-    MPI_Comm_size(MPI_COMM_WORLD, &n_proc);
-    if  (n_proc != 1) cout<<"Top heavy with management"<<endl;
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    if  (world_size != 1) cout<<"Top heavy with management"<<endl;
     int iam;
     MPI_Comm_rank(MPI_COMM_WORLD, &iam);
 
@@ -29,6 +29,7 @@ int main (int argc, char ** argv) {
 
 
     //choose_worker_program(worker); 
+    cout << "spawning workers with universe size" <<  universe_size << endl;
     MPI_Comm_spawn("worker", MPI_ARGV_NULL, universe_size-1,  
              MPI_INFO_NULL, 0, MPI_COMM_SELF, &everyone,  
              MPI_ERRCODES_IGNORE); 

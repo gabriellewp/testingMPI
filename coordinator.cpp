@@ -7,13 +7,14 @@ using namespace std;
 
 int main (int argc, char ** argv) {
     int world_size, universe_size, *univ_sizep, flag;
-    MPI_Comm everyone;
+    int spawnError[universe_size-1];
+
+    MPI_Comm everyone; //intercomm
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-    if  (world_size != 1) cout<<"Top heavy with management"<<endl;
+    if  (world_size != 1) cout<<"Top heavy with management, preferable to have 1 proc on coordinator side."<<endl;
     int iam;
-    MPI_Comm_rank(MPI_COMM_WORLD, &iam);
 
     MPI_Attr_get(MPI_COMM_WORLD, MPI_UNIVERSE_SIZE, &univ_sizep, &flag);
 
@@ -32,7 +33,11 @@ int main (int argc, char ** argv) {
     cout << "spawning workers with universe size" <<  universe_size << endl;
     MPI_Comm_spawn("worker", MPI_ARGV_NULL, universe_size-1,  
              MPI_INFO_NULL, 0, MPI_COMM_SELF, &everyone,  
-             MPI_ERRCODES_IGNORE); 
+             spawnError); 
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &iam);
+    MPI_Bcast(&iam,1,MPI_INT,MPI_ROOT,everyone);
+
     MPI_Finalize();
 
     return 0;

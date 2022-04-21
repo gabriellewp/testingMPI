@@ -9,7 +9,7 @@ int main (int argc, char ** argv) {
     int world_size, universe_size, *univ_sizep, flag;
     int spawnError[universe_size-1];
 
-    MPI_Comm everyone; //intercomm
+    MPI_Comm intercomm1, intercomm2; //intercomm
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
@@ -32,12 +32,24 @@ int main (int argc, char ** argv) {
     //choose_worker_program(worker); 
     cout << "spawning workers with universe size" <<  universe_size << endl;
     MPI_Comm_spawn("worker", MPI_ARGV_NULL, universe_size-1,  
-             MPI_INFO_NULL, 0, MPI_COMM_SELF, &everyone,  
+             MPI_INFO_NULL, 0, MPI_COMM_SELF, &intercomm1,  
              spawnError); 
+    //multi-stage spawning
+    // MPI_Comm_spawn("worker", MPI_ARGV_NULL, (universe_size-1)/2,  
+    //          MPI_INFO_NULL, 0, MPI_COMM_SELF, &intercomm1,  
+    //          spawnError); 
+    // MPI_Comm_spawn("worker", MPI_ARGV_NULL, (universe_size-1)/2,  
+    //          MPI_INFO_NULL, 0, MPI_COMM_SELF, &intercomm2,  
+    //          spawnError);
+
 
     MPI_Comm_rank(MPI_COMM_WORLD, &iam);
-    MPI_Bcast(&iam,1,MPI_INT,MPI_ROOT,everyone);
-
+    MPI_Bcast(&iam,1,MPI_INT,MPI_ROOT,intercomm1);
+    //MPI_Bcast(&iam,1,MPI_INT,MPI_ROOT,intercomm2);
+    int child_id;
+    //MPI_Comm_get_parent(&intercomm1); 
+    MPI_Recv(&child_id, 1, MPI_INT, MPI_ANY_SOURCE,MPI_ANY_TAG, intercomm1, MPI_STATUS_IGNORE);
+    std::cout<<"Receive response from child "<<child_id;
     MPI_Finalize();
 
     return 0;

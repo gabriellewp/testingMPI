@@ -5,13 +5,15 @@
 using namespace std;
 
 int main (int argc, char ** argv) {
-    int parent_size; 
+    int parent_size, parent_proc, parent_rank; 
     MPI_Comm intercomm; 
     MPI_Init(&argc, &argv); 
     MPI_Comm_get_parent(&intercomm); 
+    MPI_Comm_rank(intercomm, &parent_rank);
     int iam;
     MPI_Comm_rank(MPI_COMM_WORLD, &iam);
     MPI_Comm_remote_size(intercomm, &parent_size); 
+
     cout<<"test worker"<<iam <<endl;
     if (parent_size!= 1) cout<<"Something's wrong with the parent"<<endl;
 
@@ -20,6 +22,8 @@ int main (int argc, char ** argv) {
         int parent_id;
         MPI_Bcast(&parent_id, 1, MPI_INT, 0, intercomm);
         std::cout<<"Child "<<iam<<" of Parent "<<parent_id<<std::endl;
+        //broadcast back to parent
+        //MPI_Send(&iam, 1, MPI_INT,parent_id,1, intercomm);
     }
 
     MPI_Finalize();

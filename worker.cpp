@@ -20,8 +20,10 @@ int main(int argc, char ** argv) {
     else {
         int parent_id;
         //MPI_Bcast(&parent_id, 1, MPI_INT, 0, parent_comm);
-        
-        //std::cout<<"Child "<<iam<<" of Parent "<<parent_id<<std::endl;
+        if(myrank == 0){
+            MPI_Recv(&parent_id, 1, MPI_INT, 0, 0, parentcomm, MPI_STATUS_IGNORE);
+            cout<<"Child "<<myrank<<" receive message from parent: "<<parent_id<<std::endl;
+        }
         MPI_Bcast(&parent_id, 1, MPI_INT, 0, parentcomm);
 
         std::cout<<"Child "<<myrank<<" of Parent "<<parent_id<<std::endl;

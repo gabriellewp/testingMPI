@@ -10,10 +10,11 @@ int main(int argc, char ** argv) {
 
     MPI_Comm child_comm;
     int  num_processes_to_spawn = 2;
-    MPI_Comm_spawn( "./worker2", MPI_ARGV_NULL,
+    MPI_Comm_spawn( "./worker", MPI_ARGV_NULL,
                     num_processes_to_spawn, MPI_INFO_NULL,
                     0, MPI_COMM_WORLD,
                     &child_comm, MPI_ERRCODES_IGNORE );
+    MPI_Send(&rank,1, MPI_INT, 0,0, child_comm);
     MPI_Bcast(&rank,1,MPI_INT,MPI_ROOT,child_comm);
     int child_id;
     MPI_Status status;

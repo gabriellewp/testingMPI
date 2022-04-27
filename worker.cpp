@@ -1,48 +1,66 @@
-#include "mpi.h"
+#include <stdio.h> 
+#include <mpi.h>
 #include <iostream>
-#include <stdlib.h>
-
 using namespace std;
+int main(int argc, char ** argv) {
 
-int main (int argc, char ** argv) {
-    int parent_size, parent_proc, parent_rank; 
-    MPI_Comm parent_comm; //parent comm
-    MPI_Init(&argc, &argv); 
+    MPI_Init( &argc, &argv );
 
-    //parent world
-    MPI_Comm_get_parent(&parent_comm); 
-    MPI_Comm_rank(parent_comm, &parent_rank);
-    MPI_Comm_remote_size(parent_comm, &parent_size); 
+    int myrank, parent_rank, parent_size;
+    MPI_Comm_rank( MPI_COMM_WORLD, &myrank );
 
-    //my world
-    int iam;
-    MPI_Comm_rank(MPI_COMM_WORLD, &iam);
-
-
-    cout<<"test worker"<<iam <<endl;
+    MPI_Comm parentcomm;
+    MPI_Comm_get_parent( &parentcomm );
+    MPI_Comm_rank(parentcomm, &parent_rank);
+    MPI_Comm_remote_size(parentcomm, &parent_size); 
     if (parent_size!= 1) cout<<"Something's wrong with the parent"<<endl;
+    int parent_id;
 
-    if (parent_comm == MPI_COMM_NULL) cout<<"No parent!"<<endl;
+    if (parentcomm == MPI_COMM_NULL) cout<<"No parent!"<<endl;
     else {
         int parent_id;
-        MPI_Bcast(&parent_id, 1, MPI_INT, 0, parent_comm);
-        //MPI_Barrier(intercomm);
-        std::cout<<"Child "<<iam<<" of Parent "<<parent_id<<std::endl;
+        //MPI_Bcast(&parent_id, 1, MPI_INT, 0, parent_comm);
+        
+        //std::cout<<"Child "<<iam<<" of Parent "<<parent_id<<std::endl;
+        MPI_Bcast(&parent_id, 1, MPI_INT, 0, parentcomm);
+
+        std::cout<<"Child "<<myrank<<" of Parent "<<parent_id<<std::endl;
+        MPI_Send(&myrank, 1, MPI_INT, 0, 0, parentcomm);
+        //MPI_Bcast(&myrank,1, MPI_INT,myrank,parentcomm);
+        int message;
+        int rootproc;
+        if(myrank == 0)
+            rootproc = MPI_ROOT;
+        else
+            rootproc = MPI_PROC_NULL;
+        //MPI_Bcast(&myrank,1, MPI_INT,parent_rank,parentcomm);
+
+        // if(myrank == 0)
+        //     MPI_Bcast(&myrank,1, MPI_INT,MPI_ROOT,parentcomm);
+        // else
+        //     MPI_Bcast(&message, 1, MPI_INT, MPI_ANY_SOURCE, parentcomm);
 
         MPI_Comm intra_comm;
-        MPI_Intercomm_merge(parent_comm, 1, &intra_comm);
+        MPI_Intercomm_merge( parentcomm, 1, &intra_comm );
+        MPI_Comm_rank(intra_comm, &myrank);
+        
 
-        if(iam  == 0){
-            int temp_size;
-            MPI_Comm_size(parent_comm, &temp_size);
-            cout << "size of parent comm: "<<temp_size<<endl;
-            MPI_Comm_remote_size(MPI_COMM_WORLD, &temp_size);
-            cout << "size of child comm: "<<temp_size<<endl;
-            MPI_Comm_size(intra_comm, &temp_size);
-            cout << "size of intra comm: "<<temp_size<<endl;
+        if ( myrank == 0 ) {
+            int tmp_size;
+            MPI_Comm_remote_size( parentcomm, &tmp_size );
+            cout << "child size of parent comm world"<< tmp_size <<endl;
+
+            MPI_Comm_size( MPI_COMM_WORLD, &tmp_size );
+            cout << "child size of child comm world" << tmp_size <<endl;
+
+            MPI_Comm_size( intra_comm, &tmp_size );
+            cout << "child size of intra comm world"<< tmp_size <<endl;
         }
+       
     }
 
+
     MPI_Finalize();
+
     return 0;
 }

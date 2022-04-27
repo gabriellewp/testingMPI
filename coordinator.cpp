@@ -1,83 +1,58 @@
-#include "mpi.h"
+#include <stdio.h>
+#include <mpi.h>
 #include <iostream>
-#include <stdlib.h>
-
 using namespace std;
+int main(int argc, char ** argv) {
 
-int main (int argc, char ** argv) {
-    int world_size, universe_size, *univ_sizep, flag;
-    int spawnError[universe_size-1];
+    MPI_Init( &argc, &argv );
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank );
 
-    MPI_Comm intercomm1, intercomm2; //intercomm
-
-    MPI_Init(&argc, &argv);
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-    if  (world_size != 1) cout<<"Top heavy with management, preferable to have 1 proc on coordinator side."<<endl;
-    int iam;
-
-    MPI_Attr_get(MPI_COMM_WORLD, MPI_UNIVERSE_SIZE, &univ_sizep, &flag);
-
-    if(!flag){
-        cout<< "This MPI does not support UNIVERSE_SIZE"<<endl; //should create a handle for this, but later
-        cout << "Enter the universe size: ";
-        cin >> universe_size; 
-    }else{
-        universe_size = *univ_sizep;
-    }
-    if(universe_size ==1) cout<<"No room to start spawning workers"<<endl;
+    MPI_Comm child_comm;
+    int  num_processes_to_spawn = 2;
+    MPI_Comm_spawn( "./worker2", MPI_ARGV_NULL,
+                    num_processes_to_spawn, MPI_INFO_NULL,
+                    0, MPI_COMM_WORLD,
+                    &child_comm, MPI_ERRCODES_IGNORE );
+    MPI_Bcast(&rank,1,MPI_INT,MPI_ROOT,child_comm);
+    int child_id;
+    MPI_Status status;
+    for (int i=0; i < num_processes_to_spawn; i++) {
+        MPI_Recv(&child_id, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, child_comm, &status);
+        cout << "Spawner received from child rank" << child_id <<endl;
+    };
+    //MPI_Bcast(&child_id, 1, MPI_INT, MPI_ANY_SOURCE, child_comm);
 
 
-
-    //choose_worker_program(worker); 
-    cout << "spawning workers with universe size" <<  universe_size << endl;
-    if(iam == 0){ //only process 0 spawns porcesses
-        MPI_Comm_spawn("worker", MPI_ARGV_NULL, universe_size-1,  
-             MPI_INFO_NULL, 0, MPI_COMM_WORLD, &intercomm1,  
-             spawnError);
-        }
-     
-    //multi-stage spawning
-    // MPI_Comm_spawn("worker", MPI_ARGV_NULL, (universe_size-1)/2,  
-    //          MPI_INFO_NULL, 0, MPI_COMM_SELF, &intercomm1,  
-    //          spawnError); 
-    // MPI_Comm_spawn("worker", MPI_ARGV_NULL, (universe_size-1)/2,  
-    //          MPI_INFO_NULL, 0, MPI_COMM_SELF, &intercomm2,  
-    //          spawnError);
-
-
-    MPI_Comm_rank(MPI_COMM_WORLD, &iam);
-    MPI_Bcast(&iam,1,MPI_INT,MPI_ROOT,intercomm1);
-    cout << "test broadcast parent "<<endl;
     
-    
+    // std::cout<<"Spawner received broadcast from child rank "<<child_id<<endl;
+
     MPI_Comm intra_comm;
-    MPI_Intercomm_merge(intercomm1, 0, &intra_comm);
-    if(iam == 0){ 
-        int temp_size;
-        //checking size after merging
-        MPI_Comm_size(intra_comm, &temp_size);
-        cout << "size of intra comm: "<<temp_size<<endl;
-        MPI_Comm_remote_size(intercomm1, &temp_size);
-        cout << "size of child comm: "<<temp_size<<endl;
-        MPI_Comm_size(MPI_COMM_WORLD, &temp_size);
-        cout << "size of parent comm: "<<temp_size<<endl;
+    MPI_Intercomm_merge( child_comm, 0, &intra_comm );
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+    //MPI_Bcast(&child_id, 1, MPI_INT, MPI_ANY_SOURCE, intra_comm);
+    //broadcast after intercomm merge
+    int message;
+    if(rank == 0){
+        MPI_Bcast(&rank,1, MPI_INT,rank,intra_comm);
     }
+    else{
+        MPI_Bcast(&message, 1, MPI_INT, MPI_ANY_SOURCE, intra_comm);
+        cout << "rank" << rank << "received: "<<message <<endl;
+    }
+    if ( rank == 0 ) {
+        int tmp_size;
+        MPI_Comm_size( intra_comm, &tmp_size );
+        cout << "size of intra comm world " << tmp_size  <<endl;
 
-    // //test our new intra_comm with broadcasting message
-    // MPI_Comm_rank(intra_comm, &iam);
-    // if(iam == 0){
-    //     MPI_Bcast(&iam, 1, MPI_INT, 0, intra_comm);
-    //     //int inter_source = status.MPI_SOURCE;
-    //     //std::cout<<"Receive response from child "<<child_id;
-    // }else{
-    //     int messageInt;
-    //     MPI_Bcast(&messageInt, 1, MPI_INT, 0, intra_comm);
-    //     cout << "Rank"<<iam<<"receives message from rank 0: "<< messageInt<<endl;
-    // }
-        
+        MPI_Comm_remote_size( child_comm, &tmp_size );
+        cout << "size of child comm world "<< tmp_size <<endl;
+
+        MPI_Comm_size( MPI_COMM_WORLD, &tmp_size );
+        cout << "size of parent comm world"<< tmp_size <<endl;
+    }
 
     MPI_Finalize();
 
     return 0;
-
 }

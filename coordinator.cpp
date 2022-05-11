@@ -32,7 +32,7 @@ struct body{
 
 
 
-void createMPIType(MPI_Datatype* newT){
+MPI_Datatype createMPIType(){
     MPI_Datatype new_type;
     int count = 3;
     int blocklens[] = { 7,7,1 };
@@ -40,16 +40,15 @@ void createMPIType(MPI_Datatype* newT){
     MPI_Aint indices[3];
     indices[0] = (MPI_Aint)offsetof(struct block, nrows);
     indices[1] = (MPI_Aint)offsetof(struct block, ncols);
-    indices[3] = (MPI_Aint)offsetof(struct block, bt);
-    
+    indices[2] = (MPI_Aint)offsetof(struct block, bt);
+    MPI_Datatype newT;
     MPI_Datatype old_types[] = {MPI_UINT32_T,MPI_UINT32_T, MPI_UINT8_T};
     MPI_Type_create_struct(count, blocklens, indices, old_types, &new_type);
     //resized new type
-    MPI_Datatype resized_new_type;
     MPI_Aint extent = &blocklens[2] - &blocklens[0];
-    MPI_Type_create_resized(new_type, indices[0], (MPI_Aint)sizeof(struct block), &resized_new_type);
-    MPI_Type_commit( &resized_new_type);
-    
+    MPI_Type_create_resized(new_type, indices[0], (MPI_Aint)sizeof(struct block), &newT);
+    MPI_Type_commit( &newT);
+    return newT;
 }
 //there must be another struct for block type-specific info
 
@@ -108,8 +107,8 @@ int main(int argc, char ** argv) {
         MPI_Comm_size( MPI_COMM_WORLD, &tmp_size );
         cout << "size of parent comm world"<< tmp_size <<endl;
     }
-    MPI_Datatype bb_type;
-    createMPIType(&bb_type);
+    MPI_Datatype bb_type = createMPIType();
+    //createMPIType(&bb_type);
 
     int btinfolen  = 10;
     //trying to send dynamic block 
@@ -121,11 +120,15 @@ int main(int argc, char ** argv) {
         for (uint8_t i=0; i < btinfolen; i++){
             bodyblock.btinfo[i] = i;
         }    
+        cout << "start send body block"<<endl;
         MPI_Send(&bodyblock, 1, bb_type, 1, 00, MPI_COMM_WORLD);
+        cout << "start send body block btinfo"<<endl;
         MPI_Send(bodyblock.btinfo, btinfolen, MPI_UINT8_T, 1, 01, MPI_COMM_WORLD);
     }else if(rank==1){
         MPI_Recv( &bodyblock, 1, bb_type, 0, 00, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
+        cout << "receive body block"<<endl;
         MPI_Recv( bodyblock.btinfo, btinfolen, MPI_UINT8_T, 0, 01, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
+        cout << "receive btinfo"<<endl;
     }  
 
     MPI_Type_free( &bb_type );

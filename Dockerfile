@@ -15,5 +15,12 @@ RUN apt-get install -y gcc
 RUN apt-get install -y libboost-all-dev
 RUN DEBIAN_FRONTEND="noninteractive" apt-get install -y openmpi-bin openmpi-common libopenmpi-dev libgtk2.0-dev 
 RUN DEBIAN_FRONTEND="noninteractive" apt-get install -y mpich #also replace with openmpi
-
+RUN cd /home && wget http://downloads.sourceforge.net/project/boost/boost/1.79.0/boost_1_79_0.tar.gz \
+  && tar xfz boost_1_79_0.tar.gz \
+  && rm boost_1_79_0.tar.gz \
+  && cd boost_1_79_0 \
+  && ./bootstrap.sh --prefix=/usr/local --with-libraries=program_options \
+  && ./b2 install \
+  && cd /home \
+  && rm -rf boost_1_79_0
 CMD echo "Done"

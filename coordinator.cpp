@@ -6,11 +6,34 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/serialization/binary_object.hpp>
 #include <boost/serialization/serialization.hpp>
-#include <boost/serialization/vector.hpp>
 #include <stdio.h>
 #include <stdlib.h>
+#include "message.hpp"
 using namespace std;
- 
+
+
+std::string serializeMessage(const Message &m) {
+  std::stringstream ss;
+  boost::archive::binary_oarchive oa{ss};
+
+  oa << m;
+
+  return ss.str();
+}
+
+Task deserializeTask(const std::string &in) {
+  std::stringstream ss(in);
+  std::cout << "A" << std::endl;
+  boost::archive::binary_iarchive ia{ss};
+  std::cout << "b" << std::endl;
+
+  Message obj; // Foo must be default-constructible
+  ia >> obj;
+
+  std::cout << "C" << std::endl;
+
+  return obj;
+}
 
 // MPI_Datatype createMPIType(){
 //     MPI_Datatype new_type;
@@ -117,8 +140,20 @@ int main(int argc, char ** argv) {
     
     
     //serialization using boost
-    
-    
+    Message m = ;
+    std::string serMsg = serializeMessage(m);
+    int serLen = serMsg.size();
+    if(rank == 0){
+        MPI_Send((void*) serMsg.data(),serLen,MPI_BYTE,1,00,MPI_COMM_WORLD); 
+    }else if(rank==1){
+        MPI_Probe(1,00,MPI_COMM_WORLD,&mStatus);
+        int number_amount;
+        MPI_Get_count(&mStatus, MPI_BYTE, &number_amount);
+
+
+        char tdata[number_amount + 1];
+        MPI_Recv(tdata, number_amount, MPI_BYTE, 1, 8888, MPI_COMM_WORLD, &mStatus);
+    }
     MPI_Finalize();
 
     return 0;

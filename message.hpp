@@ -1,4 +1,9 @@
-struct header: {
+#include <boost/serialization/vector.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+
+
+struct header{
     header(): version(0), dt(0), nrows(0), ncolumns(0){}
     uint8_t version;
     uint8_t dt;
@@ -14,14 +19,14 @@ struct block{
     uint8_t* btinfo;
 };   
 
-struct body{
+struct body: block{
     body(): irow(0), icol(0){}
     uint64_t irow;
     uint64_t icol;
     block block_;
 };  
 
-struct message: header, block, body
+struct Message: header, block, body
 {
     message(): header(), body(), block(){} // Added default constructor
     
